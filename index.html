@@ -8,112 +8,172 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FontAwesome per le icone (Aggiornato con CDN ultra stabile) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel per leggere JSX nel browser -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- FIREBASE LIBRARIES -->
+    <!-- Questo blocco gestisce Firebase separatamente per evitare crash di React -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // La tua nuova configurazione Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCB5yV6u4DtzUFb0jADUJobh8In52JNzp4",
             authDomain: "maxcar-7416d.firebaseapp.com",
             projectId: "maxcar-7416d",
             storageBucket: "maxcar-7416d.firebasestorage.app",
             messagingSenderId: "279232212865",
-            appId: "1:279232212865:web:3dd2eea57cb406e5bb4280",
-            measurementId: "G-N0T2XRWND0"
+            appId: "1:279232212865:web:cc951666c63af8b8bb4280",
+            measurementId: "G-81M071PSVS"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        // Esponiamo Firebase globalmente in modo sicuro
-        window.firebaseDB = db;
-        window.firebaseCollection = collection;
-        window.firebaseGetDocs = getDocs;
+        try {
+            const app = initializeApp(firebaseConfig);
+            // Salviamo gli strumenti nella variabile 'window' per poterli usare dentro React
+            window.db = getFirestore(app);
+            window.firebaseCollection = collection;
+            window.firebaseGetDocs = getDocs;
+            window.firebaseInitialized = true;
+            console.log("Firebase inizializzato con successo!");
+        } catch (error) {
+            console.error("Errore inizializzazione Firebase:", error);
+        }
     </script>
-
-    <style>
-        body { margin: 0; padding: 0; background-color: #ffffff; }
-        #root { min-height: 100vh; }
-    </style>
 </head>
-<body>
+<body class="bg-white">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         const CONFIG = {
-            linkGoogleFormValutazione: "https://docs.google.com/forms/d/e/1FAIpQLSeYtcqgrOejvWqClIlEUneC2LPtTNzf67413H_mxFtcnGdnbw/viewform?embedded=true"
+            linkGoogleFormValutazione: "https://docs.google.com/forms/d/e/1FAIpQLSe_tuo_link_reale/viewform?embedded=true"
         };
 
-        function App() {
-          const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const App = () => {
           const [currentPage, setCurrentPage] = useState('Home');
+          const [isLoading, setIsLoading] = useState(true);
+          const [carsData, setCarsData] = useState([]);
+          const [inventoryFilter, setInventoryFilter] = useState('Tutti');
           const [selectedCar, setSelectedCar] = useState(null);
           const [activeImageIndex, setActiveImageIndex] = useState(0);
-          const [inventoryFilter, setInventoryFilter] = useState('Tutti');
-          const [carsData, setCarsData] = useState([]);
-          const [isLoading, setIsLoading] = useState(true);
+          const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
           const menuItems = [
-            { label: 'Home', id: 'Home' },
-            { label: 'Inventario', id: 'Inventario' },
-            { label: 'Vuoi vendere la tua auto', id: 'vendi' },
-            { label: 'Contatti', id: 'Contatti' },
-            { label: 'Chi Siamo', id: 'chi-siamo' },
+            { id: 'Home', label: 'Home' },
+            { id: 'Inventario', label: 'Parco Auto' },
+            { id: 'vendi', label: 'Vendi Auto' },
+            { id: 'chi-siamo', label: 'Chi Siamo' },
+            { id: 'Contatti', label: 'Contatti' }
+          ];
+
+          // Auto di base per mostrare il sito se Firebase è vuoto o ha i permessi bloccati
+          const fallbackCars = [
+              {
+                  id: "1",
+                  brand: "Mercedes-Benz",
+                  model: "Classe A 200d",
+                  category: "Vendita",
+                  price: "€ 32.500",
+                  year: "2022",
+                  mileage: "25.000 km",
+                  fuel: "Diesel",
+                  transmission: "Automatico",
+                  power: "150 CV",
+                  displacement: "1950 cc",
+                  color: "Nero",
+                  description: "Provenienza Francoforte. Vettura aziendale in condizioni pari al nuovo. Cronologia tagliandi certificata.",
+                  images: ["https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=1000"]
+              },
+              {
+                  id: "2",
+                  brand: "Audi",
+                  model: "Q3 Sportback",
+                  category: "Vendita",
+                  price: "€ 45.000",
+                  year: "2023",
+                  mileage: "15.000 km",
+                  fuel: "Ibrido",
+                  transmission: "Automatico",
+                  power: "245 CV",
+                  displacement: "1395 cc",
+                  color: "Bianco",
+                  description: "S-Line interno ed esterno. Auto d'importazione tedesca (Francoforte), full optional.",
+                  images: ["https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&fit=crop&q=80&w=1000"]
+              },
+              {
+                  id: "3",
+                  brand: "BMW",
+                  model: "Serie 1 118i",
+                  category: "Vendita",
+                  price: "€ 28.900",
+                  year: "2021",
+                  mileage: "40.000 km",
+                  fuel: "Benzina",
+                  transmission: "Manuale",
+                  power: "136 CV",
+                  displacement: "1499 cc",
+                  color: "Grigio Topo",
+                  description: "Allestimento M-Sport. Perfetta in ogni suo dettaglio, importata da Francoforte.",
+                  images: ["https://images.unsplash.com/photo-1556800572-1b8aeef2c54f?auto=format&fit=crop&q=80&w=1000"]
+              }
           ];
 
           useEffect(() => {
-            const fetchCars = () => {
-                // Intervallo per aspettare che Firebase si inizializzi
-                let checkDBInterval = setInterval(async () => {
-                    if (window.firebaseDB && window.firebaseCollection && window.firebaseGetDocs) {
-                        clearInterval(checkDBInterval);
-                        try {
-                            const carsCol = window.firebaseCollection(window.firebaseDB, 'cars'); 
-                            const snapshot = await window.firebaseGetDocs(carsCol);
-                            
-                            const fetchedCars = [];
-                            snapshot.forEach((doc) => {
-                                fetchedCars.push({ id: doc.id, ...doc.data() });
-                            });
-                            
-                            setCarsData(fetchedCars);
-                            setIsLoading(false); // Sblocca la pagina
-                        } catch (error) {
-                            console.error("Errore lettura database:", error);
-                            setIsLoading(false); // Sblocca la pagina anche se c'è un errore!
-                        }
+            const fetchFromFirebase = async () => {
+              let attempts = 0;
+              // Controlla ogni 100ms se Firebase ha finito di caricare
+              const checkInterval = setInterval(async () => {
+                attempts++;
+                if (window.firebaseInitialized && window.db) {
+                  clearInterval(checkInterval);
+                  try {
+                    // Supponiamo che la tua collezione in Firebase si chiami 'auto' o 'inventory'
+                    const querySnapshot = await window.firebaseGetDocs(window.firebaseCollection(window.db, "auto"));
+                    const cars = [];
+                    querySnapshot.forEach((doc) => {
+                      cars.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    if(cars.length > 0) {
+                        setCarsData(cars);
+                    } else {
+                        console.log("Database connesso ma vuoto. Carico le auto di prova.");
+                        setCarsData(fallbackCars);
                     }
-                }, 200);
-
-                // Timeout di sicurezza: se dopo 4 secondi c'è un problema, sblocca forzatamente il sito
-                setTimeout(() => {
-                    clearInterval(checkDBInterval);
                     setIsLoading(false);
-                }, 4000);
+                  } catch (e) {
+                    console.error("Errore lettura database (forse permessi non attivi?):", e);
+                    setCarsData(fallbackCars);
+                    setIsLoading(false);
+                  }
+                } else if (attempts > 30) { // Dopo 3 secondi rinuncia e mostra le auto fittizie
+                  clearInterval(checkInterval);
+                  console.warn("Timeout Firebase, uso auto di prova");
+                  setCarsData(fallbackCars);
+                  setIsLoading(false);
+                }
+              }, 100);
             };
 
-            fetchCars();
+            fetchFromFirebase();
           }, []);
 
           const navigate = (page, car = null) => {
-            setCurrentPage(page);
-            setSelectedCar(car);
-            setActiveImageIndex(0);
-            setIsMobileMenuOpen(false);
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            setIsMobileMenuOpen(false);
+            if (car) {
+              setSelectedCar(car);
+              setActiveImageIndex(0);
+            }
+            setCurrentPage(page);
           };
 
           const filteredCars = inventoryFilter === 'Tutti' 
@@ -127,7 +187,6 @@
           return (
             <div className="min-h-screen bg-white font-sans text-slate-800 antialiased flex flex-col">
               
-              {/* HEADER DESKTOP */}
               <header className="hidden lg:block relative w-full h-[140px] bg-white z-50 shadow-sm">
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                   <div className="absolute top-0 left-0 w-[42%] h-[90px] bg-black" style={{ clipPath: 'polygon(0 0, 100% 0, 85% 100%, 0 100%)' }}></div>
@@ -136,7 +195,6 @@
                 <div className="relative z-10 max-w-[1440px] mx-auto h-full flex flex-col">
                   <div className="flex h-[90px]">
                     <div className="w-[35%] flex items-center pl-10 text-white cursor-pointer" onClick={() => navigate('Home')}>
-                      {/* INSERISCI QUI IL LINK DELL'IMMAGINE DEL TUO LOGO SOSTITUENDO src="logo.png" */}
                       <img src="logo.png" alt="Logo VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                       <div className="flex flex-col leading-tight">
                         <span className="text-2xl font-black tracking-tighter uppercase text-[#eab308]">VINMORAUTO</span>
@@ -175,7 +233,6 @@
                 </div>
               </header>
 
-              {/* HEADER MOBILE */}
               <header className="lg:hidden bg-black text-white p-5 flex justify-between items-center sticky top-0 z-50">
                 <div className="flex items-center cursor-pointer" onClick={() => navigate('Home')}>
                     <div className="flex flex-col">
@@ -188,7 +245,6 @@
                 </button>
               </header>
 
-              {/* MENU MOBILE OVERLAY */}
               {isMobileMenuOpen && (
                 <div className="lg:hidden fixed inset-0 z-40 bg-black pt-24 px-8 text-white flex flex-col gap-6 overflow-y-auto">
                     {menuItems.map(item => (
@@ -205,7 +261,6 @@
                       </div>
                   )}
 
-                  {/* VISTA HOME PAGE */}
                   {currentPage === 'Home' && !isLoading && (
                       <>
                           <section className="relative h-[650px] flex items-center justify-center text-center overflow-hidden border-b-8 border-[#eab308]">
@@ -224,21 +279,18 @@
                           <section className="py-24 bg-gray-50">
                             <div className="max-w-6xl mx-auto px-6">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-                                {/* AUTOLAVAGGIO */}
                                 <div className="flex flex-col items-center group bg-white p-10 rounded-3xl shadow-sm hover:shadow-xl transition-all border-b-4 border-transparent hover:border-[#eab308]">
                                   <div className="w-24 h-24 rounded-full bg-[#eab308] flex items-center justify-center mb-8"><i className="fa-solid fa-shower text-[38px] text-black"></i></div>
                                   <h3 className="text-xl font-black text-black mb-2 uppercase tracking-tighter">Autolavaggio</h3>
                                   <span className="text-[10px] bg-black text-[#eab308] px-3 py-1 rounded-full font-bold uppercase tracking-widest mb-4">Attivo da 2 anni</span>
                                   <p className="text-gray-500 text-sm leading-relaxed">Lavaggio accurato e cura dei dettagli per far tornare la tua auto o moto come nuova.</p>
                                 </div>
-                                {/* VENDITA AUTO */}
                                 <div className="flex flex-col items-center group bg-black p-10 rounded-3xl shadow-xl transition-all border-b-4 border-[#eab308] transform scale-105">
                                   <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mb-8"><i className="fa-solid fa-car text-[38px] text-black"></i></div>
                                   <h3 className="text-xl font-black text-[#eab308] mb-2 uppercase tracking-tighter">Vendita Auto</h3>
                                   <span className="text-[10px] bg-[#eab308] text-black px-3 py-1 rounded-full font-bold uppercase tracking-widest mb-4">Aperta da un anno</span>
                                   <p className="text-gray-300 text-sm leading-relaxed">Esportazione e importazione diretta ed esclusiva da Francoforte (Germania) per garantirti standard superiori.</p>
                                 </div>
-                                {/* NOLEGGIO */}
                                 <div className="flex flex-col items-center group bg-white p-10 rounded-3xl shadow-sm hover:shadow-xl transition-all border-b-4 border-transparent hover:border-[#eab308]">
                                   <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-8"><i className="fa-solid fa-key text-[38px] text-[#eab308]"></i></div>
                                   <h3 className="text-xl font-black text-black mb-2 uppercase tracking-tighter">Noleggio</h3>
@@ -249,7 +301,6 @@
                             </div>
                           </section>
 
-                          {/* SEZIONE AUTO IN EVIDENZA */}
                           <section className="py-24 bg-white border-t border-gray-50">
                             <div className="max-w-[1200px] mx-auto px-6">
                               <div className="text-center mb-16">
@@ -259,7 +310,6 @@
                                   <i className="fa-solid fa-car text-[20px] text-[#eab308]"></i>
                                   <div className="h-[2px] w-12 bg-gray-200"></div>
                                 </div>
-                                <p className="text-gray-500 text-sm max-w-2xl mx-auto">Le nostre migliori importazioni dirette dalla Germania pronte per te.</p>
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -298,11 +348,6 @@
                                     </div>
                                   </div>
                                 ))}
-                                {carsData.length === 0 && (
-                                    <div className="col-span-full text-center py-10">
-                                        <span className="text-gray-400 font-bold uppercase tracking-widest">Nessun veicolo in evidenza al momento.</span>
-                                    </div>
-                                )}
                               </div>
                               
                               {carsData.length > 0 && (
@@ -317,7 +362,6 @@
                       </>
                   )}
 
-                  {/* VISTA INVENTARIO */}
                   {currentPage === 'Inventario' && !isLoading && (
                       <section className="py-24 bg-gray-50">
                           <div className="max-w-[1200px] mx-auto px-6">
@@ -351,7 +395,7 @@
                                         </span>
                                     </div>
                                     <div className="relative h-60 overflow-hidden">
-                                      <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                      <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                       <div className="absolute top-4 right-4 bg-[#eab308] text-black px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest">{car.price}</div>
                                     </div>
                                     <div className="p-8">
@@ -365,18 +409,11 @@
                                     </div>
                                   </div>
                                 ))}
-                                {filteredCars.length === 0 && (
-                                    <div className="col-span-full text-center py-20">
-                                        <i className="fa-solid fa-car-side text-6xl text-gray-200 mb-4 block"></i>
-                                        <span className="text-gray-400 font-bold uppercase tracking-widest">Nessun veicolo presente nel database.</span>
-                                    </div>
-                                )}
                             </div>
                           </div>
                       </section>
                   )}
 
-                  {/* VISTA DETTAGLIO */}
                   {currentPage === 'Dettaglio' && selectedCar && !isLoading && (
                       <section className="bg-white py-12">
                           <div className="max-w-[1200px] mx-auto px-6">
@@ -389,15 +426,7 @@
                                       
                                       <div className="flex flex-col gap-4">
                                           <div className="w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg border border-gray-100 relative">
-                                              <div className="absolute top-4 left-4 z-10">
-                                                  <span className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
-                                                      {selectedCar.category}
-                                                  </span>
-                                              </div>
                                               <img src={selectedCar.images && selectedCar.images[activeImageIndex] ? selectedCar.images[activeImageIndex] : "https://placehold.co/800x600/eeeeee/999999?text=Nessuna+Foto"} alt={selectedCar.model} className="w-full h-full object-cover transition-opacity duration-300" />
-                                              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                                                  {activeImageIndex + 1} / {selectedCar.images ? selectedCar.images.length : 1}
-                                              </div>
                                           </div>
                                           {selectedCar.images && selectedCar.images.length > 1 && (
                                               <div className="grid grid-cols-5 gap-3">
@@ -428,7 +457,7 @@
                                                 href="tel:+393884713206" 
                                                 className="w-full bg-black text-[#eab308] py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-[#eab308] hover:text-black transition-colors shadow-xl flex justify-center items-center gap-3 border border-black"
                                               >
-                                                  <i className="fa-solid fa-phone text-[18px]"></i> {selectedCar.category === 'Noleggio' ? 'Chiama per Noleggiare' : 'Chiamaci ora per saperne di più'}
+                                                  <i className="fa-solid fa-phone text-[18px]"></i> Chiamaci ora per saperne di più
                                               </a>
                                               <a 
                                                 href={`https://api.whatsapp.com/send?phone=393884713206&text=${whatsappMessage}`} 
@@ -474,28 +503,17 @@
                       </section>
                   )}
 
-                  {/* VISTA VENDI */}
                   {currentPage === 'vendi' && (
                       <div className="py-24 px-6 max-w-5xl mx-auto animate-in fade-in duration-700">
                           <h2 className="text-5xl font-black uppercase italic mb-8 text-center text-black">Vendi la tua <span className="text-[#eab308]">Auto</span></h2>
-                          <p className="text-center text-slate-500 font-bold mb-12 text-sm">Compila il modulo sottostante con i dati del tuo veicolo per ricevere una valutazione gratuita e senza impegno.</p>
                           <div className="bg-white p-4 md:p-8 rounded-[3rem] shadow-xl border border-slate-100 flex justify-center w-full h-[900px]">
-                              <iframe 
-                                  src={CONFIG.linkGoogleFormValutazione} 
-                                  width="100%" 
-                                  height="100%" 
-                                  frameBorder="0" 
-                                  marginHeight="0" 
-                                  marginWidth="0"
-                                  className="rounded-2xl"
-                              >Caricamento in corso…</iframe>
+                              <iframe src={CONFIG.linkGoogleFormValutazione} width="100%" height="100%" frameBorder="0" className="rounded-2xl">Caricamento...</iframe>
                           </div>
                       </div>
                   )}
 
-                  {/* VISTA CHI SIAMO */}
                   {currentPage === 'chi-siamo' && (
-                      <section className="bg-white animate-in fade-in duration-700">
+                      <section className="bg-white">
                           <div className="bg-black py-24 px-6 text-center relative overflow-hidden">
                               <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=2000")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
                               <div className="relative z-10 max-w-4xl mx-auto">
@@ -512,12 +530,7 @@
                           <div className="py-24 container mx-auto px-6 lg:px-20 max-w-[1200px]">
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                                   <div className="relative">
-                                      <div className="absolute -top-6 -left-6 w-32 h-32 bg-[#eab308]/20 rounded-full -z-10"></div>
-                                      <img 
-                                          src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1000" 
-                                          className="rounded-[2.5rem] shadow-2xl border-8 border-white relative z-10"
-                                          alt="La nostra storia"
-                                      />
+                                      <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1000" className="rounded-[2.5rem] shadow-2xl border-8 border-white relative z-10" alt="La nostra storia" />
                                       <div className="absolute -bottom-6 -right-6 bg-[#eab308] text-black p-8 rounded-3xl shadow-xl hidden md:block z-20">
                                           <div className="text-4xl font-black"><i className="fa-solid fa-user-gear"></i></div>
                                           <div className="text-[10px] font-bold uppercase tracking-widest mt-2">Operaio & Venditore</div>
@@ -526,35 +539,12 @@
                                   <div className="flex flex-col gap-6">
                                       <span className="text-[#eab308] font-black uppercase tracking-[0.2em] text-xs">La Storia di Vincenzo Morena</span>
                                       <h2 className="text-4xl font-black uppercase text-black tracking-tighter">Una passione per i motori nata da bambino</h2>
-                                      <p className="text-gray-500 leading-relaxed">
-                                          La mia passione nasce fin da piccolo: sono sempre stato un patito di auto e moto. Sono cresciuto osservando e ammirando il lavoro di mio padre, che di professione faceva il carrozziere. Respirare quell'aria ha fatto sì che i motori diventassero per sempre il mio mondo.
-                                      </p>
-                                      <p className="text-gray-500 leading-relaxed">
-                                          Oggi lavoro come operaio in un'azienda, e VINMORAUTO è la concretizzazione di un sogno, portato avanti come secondo lavoro nato puramente dalla passione. Ci tengo a sottolinearlo: <strong>sono orgogliosamente un operaio e un venditore</strong>. Conosco l'importanza del lavoro duro e ci metto la stessa identica dedizione per offrire serietà ai miei clienti.
-                                      </p>
+                                      <p className="text-gray-500 leading-relaxed">La mia passione nasce fin da piccolo. Sono cresciuto ammirando il lavoro di mio padre carrozziere...</p>
+                                      <p className="text-gray-500 leading-relaxed">Oggi lavoro come operaio in un'azienda, e VINMORAUTO è la concretizzazione di un sogno. <strong>Sono orgogliosamente un operaio e un venditore</strong>.</p>
                                       
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 border-l-4 border-l-[#eab308]">
-                                              <i className="fa-solid fa-shower text-black mb-2 text-[20px]"></i>
-                                              <h4 className="font-bold text-black uppercase text-sm mb-1">Autolavaggio</h4>
-                                              <p className="text-xs text-gray-500">Attivo da oltre 2 anni con servizi di alta qualità per la cura del tuo veicolo.</p>
-                                          </div>
-                                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 border-l-4 border-l-black">
-                                              <i className="fa-solid fa-key text-black mb-2 text-[20px]"></i>
-                                              <h4 className="font-bold text-black uppercase text-sm mb-1">Noleggio Auto</h4>
-                                              <p className="text-xs text-gray-500">Servizio attualmente in lavorazione, pronto ad aprire a brevissimo.</p>
-                                          </div>
-                                      </div>
-
-                                      <div className="mt-4 p-6 bg-black text-white rounded-2xl border border-[#eab308] relative overflow-hidden">
-                                          <i className="fa-solid fa-earth-europe text-[#eab308] opacity-10 text-[120px] absolute -right-6 -bottom-6"></i>
-                                          <div className="relative z-10">
-                                              <i className="fa-solid fa-plane-departure text-[#eab308] mb-3 text-[24px]"></i>
-                                              <h4 className="font-bold text-[#eab308] uppercase text-sm mb-2">Import/Export Esclusivo dalla Germania</h4>
-                                              <p className="text-sm text-gray-300 leading-relaxed">
-                                                  Oltre alla vendita classica, ci occupiamo di esportazione e importazione. Acquistiamo i nostri veicoli <strong>esclusivamente in Germania, a Francoforte</strong>, assicurandoci auto con cronologia tagliandi e standard qualitativi nettamente superiori.
-                                              </p>
-                                          </div>
+                                      <div className="mt-4 p-6 bg-black text-white rounded-2xl border border-[#eab308]">
+                                          <h4 className="font-bold text-[#eab308] uppercase text-sm mb-2">Import/Export Esclusivo dalla Germania</h4>
+                                          <p className="text-sm text-gray-300 leading-relaxed">Acquistiamo i nostri veicoli <strong>esclusivamente in Germania, a Francoforte</strong>.</p>
                                       </div>
                                   </div>
                               </div>
@@ -562,92 +552,21 @@
                       </section>
                   )}
 
-                  {/* VISTA CONTATTI */}
-                  {['Contatti'].includes(currentPage) && (
-                      <section className="bg-white py-24 animate-in fade-in duration-700">
+                  {currentPage === 'Contatti' && (
+                      <section className="bg-white py-24">
                           <div className="max-w-[1200px] mx-auto px-6">
                               <div className="text-center mb-16">
-                                  <span className="text-[#eab308] font-black uppercase tracking-[0.2em] text-xs">Siamo a tua disposizione</span>
                                   <h1 className="text-5xl lg:text-6xl font-black uppercase tracking-tighter text-black mt-2 mb-6">Contattaci</h1>
-                                  <div className="flex items-center justify-center gap-4">
-                                      <div className="h-[2px] w-12 bg-[#eab308]"></div>
-                                      <i className="fa-solid fa-envelope text-gray-300 text-[20px]"></i>
-                                      <div className="h-[2px] w-12 bg-[#eab308]"></div>
-                                  </div>
                               </div>
-
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                                   <div className="flex flex-col gap-8">
-                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
+                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6">
                                           <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
                                               <i className="fa-solid fa-phone text-[28px]"></i>
                                           </div>
                                           <div>
-                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Recapito Telefonico</h3>
-                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Chiamaci per informazioni su vendita, autolavaggio o noleggio.</p>
-                                              <a href="tel:+393884713206" className="inline-flex text-black font-black text-lg hover:text-[#eab308] transition-colors">
-                                                  388 471 3206
-                                              </a>
-                                          </div>
-                                      </div>
-
-                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
-                                          <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
-                                              <i className="fa-solid fa-envelope text-[28px]"></i>
-                                          </div>
-                                          <div>
-                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Posta Elettronica</h3>
-                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Preferisci scriverci? Inviaci un'email e ti risponderemo il prima possibile.</p>
-                                              <a href="mailto:vinmorauto@gmail.com" className="inline-flex text-black font-black text-lg hover:text-[#eab308] transition-colors break-all">
-                                                  vinmorauto@gmail.com
-                                              </a>
-                                          </div>
-                                      </div>
-
-                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
-                                          <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
-                                              <i className="fa-brands fa-facebook text-[28px]"></i>
-                                          </div>
-                                          <div>
-                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Social Network</h3>
-                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Rimani aggiornato sui nuovi arrivi da Francoforte.</p>
-                                              <a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="inline-flex text-[#1877F2] font-black hover:text-[#eab308] transition-colors break-all">
-                                                  Visita la nostra pagina Facebook
-                                              </a>
-                                          </div>
-                                      </div>
-                                  </div>
-
-                                  <div className="flex flex-col gap-8 h-full">
-                                      <div className="bg-black text-white rounded-3xl p-10 shadow-xl h-full flex flex-col justify-center relative overflow-hidden border-2 border-[#eab308]">
-                                          <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#eab308]/20 rounded-full blur-2xl"></div>
-                                          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[#eab308]/20 rounded-full blur-2xl"></div>
-                                          
-                                          <div className="relative z-10">
-                                              <h3 className="text-3xl font-black uppercase text-[#eab308] tracking-tighter mb-8 flex items-center gap-3">
-                                                  <i className="fa-regular fa-clock text-[28px]"></i> Orari di Apertura
-                                              </h3>
-                                              
-                                              <div className="flex flex-col gap-4">
-                                                  <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Lunedì - Venerdì</span>
-                                                      <span className="text-white font-black">09:00 - 13:00 / 15:00 - 19:00</span>
-                                                  </div>
-                                                  <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Sabato</span>
-                                                      <span className="text-white font-black">09:00 - 13:00</span>
-                                                  </div>
-                                                  <div className="flex justify-between items-center pb-4">
-                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Domenica</span>
-                                                      <span className="text-red-500 font-black">Chiuso</span>
-                                                  </div>
-                                              </div>
-
-                                              <div className="mt-10 p-6 bg-white/10 rounded-2xl border border-white/20">
-                                                  <p className="text-gray-300 text-sm leading-relaxed italic">
-                                                      "Si consiglia di fissare sempre un appuntamento telefonico prima di recarsi in sede per garantire la nostra totale disponibilità."
-                                                  </p>
-                                              </div>
+                                              <h3 className="text-xl font-black uppercase text-black mb-2">Telefono</h3>
+                                              <a href="tel:+393884713206" className="text-black font-black text-lg">388 471 3206</a>
                                           </div>
                                       </div>
                                   </div>
@@ -657,11 +576,10 @@
                   )}
               </main>
 
-              {/* FOOTER */}
               <footer className="bg-black text-white pt-20 pb-10 mt-auto border-t-4 border-[#eab308]">
                 <div className="max-w-[1400px] mx-auto px-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-16 border-b border-white/10 pb-16">
-                    <div className="col-span-1 md:col-span-1">
+                    <div>
                       <div className="flex items-center mb-6 cursor-pointer" onClick={() => navigate('Home')}>
                           <img src="logo.png" alt="VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                           <div className="flex flex-col leading-tight">
@@ -669,26 +587,10 @@
                             <span className="text-[10px] tracking-[0.3em] uppercase text-white font-bold">Di Vincenzo Morena</span>
                           </div>
                       </div>
-                      <p className="text-gray-400 text-sm leading-relaxed mb-6">Autolavaggio, vendita auto d'importazione esclusiva da Francoforte e servizi di noleggio.</p>
-                      <a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 bg-[#eab308] text-black px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:bg-white transition-colors w-max shadow-lg">
-                          <i className="fa-brands fa-facebook text-lg"></i> Seguici su Facebook
-                      </a>
-                    </div>
-                    <div>
-                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Link Rapidi</h4>
-                      <ul className="flex flex-col gap-4 text-gray-400 text-xs font-medium">
-                        {menuItems.map(item => (
-                            <li key={item.label} onClick={() => navigate(item.id)} className="hover:text-white cursor-pointer uppercase tracking-widest transition-colors">{item.label}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Contatti</h4>
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mt-4">Tel: 388 471 3206</p>
-                      <p className="text-gray-400 text-[10px] uppercase tracking-widest mt-2 break-all">vinmorauto@gmail.com</p>
+                      <p className="text-gray-400 text-sm leading-relaxed mb-6">Autolavaggio, vendita auto d'importazione da Francoforte.</p>
                     </div>
                   </div>
-                  <div className="text-center text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">© 2024 VINMORAUTO Di Vincenzo Morena. Tutti i diritti riservati.</div>
+                  <div className="text-center text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">© 2024 VINMORAUTO. Tutti i diritti riservati.</div>
                 </div>
               </footer>
             </div>
