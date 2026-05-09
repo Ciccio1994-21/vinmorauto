@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VINMORAUTO Di Vincenzo Morena</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome per le icone (Aggiornato con CDN ultra stabile) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel per leggere JSX nel browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- FIREBASE LIBRARIES -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCB5yV6u4DtzUFb0jADUJobh8In52JNzp4",
+            authDomain: "maxcar-7416d.firebaseapp.com",
+            projectId: "maxcar-7416d",
+            storageBucket: "maxcar-7416d.firebasestorage.app",
+            messagingSenderId: "279232212865",
+            appId: "1:279232212865:web:3dd2eea57cb406e5bb4280",
+            measurementId: "G-N0T2XRWND0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Esponiamo Firebase globalmente in modo sicuro
+        window.firebaseDB = db;
+        window.firebaseCollection = collection;
+        window.firebaseGetDocs = getDocs;
+    </script>
+
+    <style>
+        body { margin: 0; padding: 0; background-color: #ffffff; }
+        #root { min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const CONFIG = {
+            linkGoogleFormValutazione: "https://docs.google.com/forms/d/e/1FAIpQLSeYtcqgrOejvWqClIlEUneC2LPtTNzf67413H_mxFtcnGdnbw/viewform?embedded=true"
+        };
+
+        function App() {
+          const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+          const [currentPage, setCurrentPage] = useState('Home');
+          const [selectedCar, setSelectedCar] = useState(null);
+          const [activeImageIndex, setActiveImageIndex] = useState(0);
+          const [inventoryFilter, setInventoryFilter] = useState('Tutti');
+          const [carsData, setCarsData] = useState([]);
+          const [isLoading, setIsLoading] = useState(true);
+
+          const menuItems = [
+            { label: 'Home', id: 'Home' },
+            { label: 'Inventario', id: 'Inventario' },
+            { label: 'Vuoi vendere la tua auto', id: 'vendi' },
+            { label: 'Contatti', id: 'Contatti' },
+            { label: 'Chi Siamo', id: 'chi-siamo' },
+          ];
+
+          useEffect(() => {
+            const fetchCars = () => {
+                // Intervallo per aspettare che Firebase si inizializzi
+                let checkDBInterval = setInterval(async () => {
+                    if (window.firebaseDB && window.firebaseCollection && window.firebaseGetDocs) {
+                        clearInterval(checkDBInterval);
+                        try {
+                            const carsCol = window.firebaseCollection(window.firebaseDB, 'cars'); 
+                            const snapshot = await window.firebaseGetDocs(carsCol);
+                            
+                            const fetchedCars = [];
+                            snapshot.forEach((doc) => {
+                                fetchedCars.push({ id: doc.id, ...doc.data() });
+                            });
+                            
+                            setCarsData(fetchedCars);
+                            setIsLoading(false); // Sblocca la pagina
+                        } catch (error) {
+                            console.error("Errore lettura database:", error);
+                            setIsLoading(false); // Sblocca la pagina anche se c'è un errore!
+                        }
+                    }
+                }, 200);
+
+                // Timeout di sicurezza: se dopo 4 secondi c'è un problema, sblocca forzatamente il sito
+                setTimeout(() => {
+                    clearInterval(checkDBInterval);
+                    setIsLoading(false);
+                }, 4000);
+            };
+
+            fetchCars();
+          }, []);
+
+          const navigate = (page, car = null) => {
+            setCurrentPage(page);
+            setSelectedCar(car);
+            setActiveImageIndex(0);
+            setIsMobileMenuOpen(false);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          const filteredCars = inventoryFilter === 'Tutti' 
+            ? carsData 
+            : carsData.filter(car => car.category === inventoryFilter);
+
+          const whatsappMessage = selectedCar 
+            ? encodeURIComponent(`Salve, vorrei avere maggiori informazioni sulla ${selectedCar.brand} ${selectedCar.model} (${selectedCar.category}) vista sul sito.`) 
+            : 'Salve, vorrei avere maggiori informazioni sui servizi VINMORAUTO.';
+
+          return (
+            <div className="min-h-screen bg-white font-sans text-slate-800 antialiased flex flex-col">
+              
+              {/* HEADER DESKTOP */}
+              <header className="hidden lg:block relative w-full h-[140px] bg-white z-50 shadow-sm">
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  <div className="absolute top-0 left-0 w-[42%] h-[90px] bg-black" style={{ clipPath: 'polygon(0 0, 100% 0, 85% 100%, 0 100%)' }}></div>
+                  <div className="absolute bottom-0 left-0 w-full h-[50px] bg-black" style={{ clipPath: 'polygon(7% 0, 100% 0, 100% 100%, 0 100%)' }}></div>
+                </div>
+                <div className="relative z-10 max-w-[1440px] mx-auto h-full flex flex-col">
+                  <div className="flex h-[90px]">
+                    <div className="w-[35%] flex items-center pl-10 text-white cursor-pointer" onClick={() => navigate('Home')}>
+                      {/* INSERISCI QUI IL LINK DELL'IMMAGINE DEL TUO LOGO SOSTITUENDO src="logo.png" */}
+                      <img src="logo.png" alt="Logo VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-2xl font-black tracking-tighter uppercase text-[#eab308]">VINMORAUTO</span>
+                        <span className="text-[10px] tracking-[0.3em] uppercase text-white font-bold">Di Vincenzo Morena</span>
+                      </div>
+                    </div>
+                    <div className="w-[65%] flex items-center justify-end gap-10 pr-10">
+                       <div className="flex items-center gap-3">
+                         <div className="bg-gray-100 p-2 rounded-full w-8 h-8 flex items-center justify-center"><i className="fa-solid fa-phone text-black"></i></div>
+                         <div className="flex flex-col"><span className="text-[10px] font-bold text-gray-400 uppercase">Chiamaci:</span><span className="text-[13px] font-bold text-gray-800">388 471 3206</span></div>
+                       </div>
+                       <div className="flex items-center gap-3">
+                         <div className="bg-gray-100 p-2 rounded-full w-8 h-8 flex items-center justify-center"><i className="fa-solid fa-envelope text-black"></i></div>
+                         <div className="flex flex-col"><span className="text-[10px] font-bold text-gray-400 uppercase">Email:</span><span className="text-[13px] font-bold text-gray-800">vinmorauto@gmail.com</span></div>
+                       </div>
+                       <div className="flex items-center gap-3">
+                         <div className="bg-gray-100 p-2 rounded-full w-8 h-8 flex items-center justify-center"><i className="fa-brands fa-facebook text-black"></i></div>
+                         <div className="flex flex-col"><span className="text-[10px] font-bold text-gray-400 uppercase">Social:</span><a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="text-[13px] font-bold text-gray-800 hover:text-[#eab308]">Visita il Profilo</a></div>
+                       </div>
+                    </div>
+                  </div>
+                  <div className="flex h-[50px] items-center justify-between text-white px-10">
+                     <nav className="flex gap-8 pl-[10%] text-[13px] font-bold uppercase tracking-widest h-full items-center">
+                       {menuItems.map((item) => (
+                         <a 
+                            key={item.label} 
+                            href="#" 
+                            onClick={(e) => { e.preventDefault(); navigate(item.id); }}
+                            className={`transition-all duration-300 border-b-2 py-1 ${currentPage === item.id ? 'text-[#eab308] border-[#eab308]' : 'border-transparent hover:text-[#eab308]'}`}
+                         >
+                            {item.label}
+                         </a>
+                       ))}
+                     </nav>
+                  </div>
+                </div>
+              </header>
+
+              {/* HEADER MOBILE */}
+              <header className="lg:hidden bg-black text-white p-5 flex justify-between items-center sticky top-0 z-50">
+                <div className="flex items-center cursor-pointer" onClick={() => navigate('Home')}>
+                    <div className="flex flex-col">
+                        <span className="text-xl font-black uppercase tracking-tighter leading-none text-[#eab308]">VINMORAUTO</span>
+                        <span className="text-[8px] uppercase tracking-widest text-white">Di Vincenzo Morena</span>
+                    </div>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                  {isMobileMenuOpen ? <i className="fa-solid fa-xmark text-[30px] text-[#eab308]"></i> : <i className="fa-solid fa-bars text-[30px] text-[#eab308]"></i>}
+                </button>
+              </header>
+
+              {/* MENU MOBILE OVERLAY */}
+              {isMobileMenuOpen && (
+                <div className="lg:hidden fixed inset-0 z-40 bg-black pt-24 px-8 text-white flex flex-col gap-6 overflow-y-auto">
+                    {menuItems.map(item => (
+                        <a key={item.label} href="#" onClick={(e) => { e.preventDefault(); navigate(item.id); }} className={`text-2xl font-bold uppercase tracking-widest border-b border-white/10 pb-3 ${currentPage === item.id ? 'text-[#eab308]' : ''}`}>{item.label}</a>
+                    ))}
+                </div>
+              )}
+
+              <main className="flex-grow">
+                  {/* SCHERMATA DI CARICAMENTO */}
+                  {isLoading && currentPage !== 'vendi' && currentPage !== 'chi-siamo' && currentPage !== 'Contatti' && (
+                      <div className="flex justify-center items-center py-40">
+                          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#eab308]"></div>
+                      </div>
+                  )}
+
+                  {/* VISTA HOME PAGE */}
+                  {currentPage === 'Home' && !isLoading && (
+                      <>
+                          <section className="relative h-[650px] flex items-center justify-center text-center overflow-hidden border-b-8 border-[#eab308]">
+                            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 scale-105" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1920")' }}>
+                              <div className="absolute inset-0 bg-black/75"></div>
+                            </div>
+                            <div className="relative z-10 px-6 max-w-4xl mx-auto">
+                              <h2 className="text-5xl md:text-7xl font-black text-[#eab308] mb-4 uppercase tracking-wider leading-tight">VINMORAUTO</h2>
+                              <h3 className="text-xl md:text-3xl font-bold text-white mb-6 uppercase tracking-widest">Di Vincenzo Morena</h3>
+                              <div className="flex items-center justify-center gap-5 my-8"><div className="h-px w-24 bg-[#eab308]/50"></div><i className="fa-solid fa-car text-[30px] text-[#eab308]"></i><div className="h-px w-24 bg-[#eab308]/50"></div></div>
+                              <p className="text-white text-lg font-light mb-12 max-w-2xl mx-auto leading-relaxed opacity-90">Auto di qualità importate esclusivamente da Francoforte, Autolavaggio specializzato e presto un nuovo servizio di Noleggio.</p>
+                              <button onClick={() => navigate('Inventario')} className="bg-[#eab308] text-black px-12 py-4 rounded-full font-black uppercase tracking-widest hover:bg-white transition-all shadow-lg border-2 border-[#eab308]">SCOPRI IL PARCO AUTO</button>
+                            </div>
+                          </section>
+
+                          <section className="py-24 bg-gray-50">
+                            <div className="max-w-6xl mx-auto px-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
+                                {/* AUTOLAVAGGIO */}
+                                <div className="flex flex-col items-center group bg-white p-10 rounded-3xl shadow-sm hover:shadow-xl transition-all border-b-4 border-transparent hover:border-[#eab308]">
+                                  <div className="w-24 h-24 rounded-full bg-[#eab308] flex items-center justify-center mb-8"><i className="fa-solid fa-shower text-[38px] text-black"></i></div>
+                                  <h3 className="text-xl font-black text-black mb-2 uppercase tracking-tighter">Autolavaggio</h3>
+                                  <span className="text-[10px] bg-black text-[#eab308] px-3 py-1 rounded-full font-bold uppercase tracking-widest mb-4">Attivo da 2 anni</span>
+                                  <p className="text-gray-500 text-sm leading-relaxed">Lavaggio accurato e cura dei dettagli per far tornare la tua auto o moto come nuova.</p>
+                                </div>
+                                {/* VENDITA AUTO */}
+                                <div className="flex flex-col items-center group bg-black p-10 rounded-3xl shadow-xl transition-all border-b-4 border-[#eab308] transform scale-105">
+                                  <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center mb-8"><i className="fa-solid fa-car text-[38px] text-black"></i></div>
+                                  <h3 className="text-xl font-black text-[#eab308] mb-2 uppercase tracking-tighter">Vendita Auto</h3>
+                                  <span className="text-[10px] bg-[#eab308] text-black px-3 py-1 rounded-full font-bold uppercase tracking-widest mb-4">Aperta da un anno</span>
+                                  <p className="text-gray-300 text-sm leading-relaxed">Esportazione e importazione diretta ed esclusiva da Francoforte (Germania) per garantirti standard superiori.</p>
+                                </div>
+                                {/* NOLEGGIO */}
+                                <div className="flex flex-col items-center group bg-white p-10 rounded-3xl shadow-sm hover:shadow-xl transition-all border-b-4 border-transparent hover:border-[#eab308]">
+                                  <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-8"><i className="fa-solid fa-key text-[38px] text-[#eab308]"></i></div>
+                                  <h3 className="text-xl font-black text-black mb-2 uppercase tracking-tighter">Noleggio</h3>
+                                  <span className="text-[10px] bg-gray-200 text-gray-500 px-3 py-1 rounded-full font-bold uppercase tracking-widest mb-4">In Lavorazione</span>
+                                  <p className="text-gray-500 text-sm leading-relaxed">Stiamo preparando una flotta dedicata al noleggio per rispondere ad ogni tua esigenza di mobilità flessibile.</p>
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+
+                          {/* SEZIONE AUTO IN EVIDENZA */}
+                          <section className="py-24 bg-white border-t border-gray-50">
+                            <div className="max-w-[1200px] mx-auto px-6">
+                              <div className="text-center mb-16">
+                                <h2 className="text-4xl font-black text-black uppercase tracking-tighter mb-4">AUTO IN EVIDENZA</h2>
+                                <div className="flex items-center justify-center gap-4 mb-6">
+                                  <div className="h-[2px] w-12 bg-gray-200"></div>
+                                  <i className="fa-solid fa-car text-[20px] text-[#eab308]"></i>
+                                  <div className="h-[2px] w-12 bg-gray-200"></div>
+                                </div>
+                                <p className="text-gray-500 text-sm max-w-2xl mx-auto">Le nostre migliori importazioni dirette dalla Germania pronte per te.</p>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {carsData.slice(0, 3).map((car) => (
+                                  <div key={car.id} onClick={() => navigate('Dettaglio', car)} className="bg-white rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-500 hover:-translate-y-2 border border-gray-100 relative">
+                                    <div className="absolute top-4 left-4 z-10">
+                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                            {car.category || 'Veicolo'}
+                                        </span>
+                                    </div>
+                                    <div className="relative h-60 overflow-hidden">
+                                      <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                      <div className="absolute top-4 right-4 bg-[#eab308] text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">{car.price || 'Trattativa Riservata'}</div>
+                                    </div>
+                                    <div className="p-8">
+                                      <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-1.5 h-6 bg-[#eab308] rounded-full"></div>
+                                        <h3 className="text-xl font-black text-black uppercase tracking-tighter">{car.brand} {car.model}</h3>
+                                      </div>
+                                      <p className="text-gray-400 text-sm leading-relaxed mb-8 h-12 overflow-hidden whitespace-pre-line line-clamp-2">{car.description || 'Nessuna descrizione fornita.'}</p>
+                                      
+                                      <div className="grid grid-cols-3 bg-gray-50 rounded-xl divide-x divide-gray-200">
+                                        <div className="py-4 px-1 text-center">
+                                          <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Anno</p>
+                                          <p className="text-[11px] font-black text-black truncate">{car.year || '-'}</p>
+                                        </div>
+                                        <div className="py-4 px-1 text-center">
+                                          <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Cambio</p>
+                                          <p className="text-[11px] font-black text-black truncate uppercase">{car.transmission || '-'}</p>
+                                        </div>
+                                        <div className="py-4 px-1 text-center">
+                                          <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Km</p>
+                                          <p className="text-[11px] font-black text-black truncate">{car.mileage || '-'}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                {carsData.length === 0 && (
+                                    <div className="col-span-full text-center py-10">
+                                        <span className="text-gray-400 font-bold uppercase tracking-widest">Nessun veicolo in evidenza al momento.</span>
+                                    </div>
+                                )}
+                              </div>
+                              
+                              {carsData.length > 0 && (
+                                <div className="text-center mt-12">
+                                  <button onClick={() => navigate('Inventario')} className="border-2 border-black text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#eab308] hover:border-[#eab308] hover:text-black transition-all shadow-sm">
+                                    Vedi tutte le auto
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </section>
+                      </>
+                  )}
+
+                  {/* VISTA INVENTARIO */}
+                  {currentPage === 'Inventario' && !isLoading && (
+                      <section className="py-24 bg-gray-50">
+                          <div className="max-w-[1200px] mx-auto px-6">
+                            <div className="text-center mb-10">
+                              <h1 className="text-5xl font-black uppercase tracking-tighter text-black mb-4">Il Nostro Parco Auto</h1>
+                              <div className="flex items-center justify-center gap-4 mb-8"><div className="h-[2px] w-12 bg-[#eab308]"></div><i className="fa-solid fa-car text-[20px] text-[#eab308]"></i><div className="h-[2px] w-12 bg-[#eab308]"></div></div>
+                              
+                              <div className="flex flex-wrap justify-center gap-4 mb-12">
+                                  {['Tutti', 'Vendita', 'Noleggio'].map(filter => (
+                                      <button 
+                                        key={filter}
+                                        onClick={() => setInventoryFilter(filter)}
+                                        className={`px-8 py-3 rounded-full font-bold uppercase tracking-widest text-xs transition-all shadow-sm ${
+                                            inventoryFilter === filter 
+                                            ? 'bg-black text-[#eab308] border-2 border-black' 
+                                            : 'bg-white text-gray-500 border-2 border-gray-200 hover:border-[#eab308] hover:text-black'
+                                        }`}
+                                      >
+                                          {filter === 'Tutti' ? 'Tutto il Parco' : (filter === 'Vendita' ? 'In Vendita' : 'A Noleggio (In Arrivo)')}
+                                      </button>
+                                  ))}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {filteredCars.map((car) => (
+                                  <div key={car.id} onClick={() => navigate('Dettaglio', car)} className="bg-white rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-500 hover:-translate-y-2 border border-gray-100 relative">
+                                    <div className="absolute top-4 left-4 z-10">
+                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                            {car.category}
+                                        </span>
+                                    </div>
+                                    <div className="relative h-60 overflow-hidden">
+                                      <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                      <div className="absolute top-4 right-4 bg-[#eab308] text-black px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest">{car.price}</div>
+                                    </div>
+                                    <div className="p-8">
+                                      <h3 className="text-xl font-black text-black uppercase tracking-tighter mb-4">{car.brand} {car.model}</h3>
+                                      <div className="flex justify-between text-sm text-gray-500 mb-6">
+                                          <span className="flex items-center gap-2"><i className="fa-regular fa-calendar"></i> {car.year}</span>
+                                          <span className="flex items-center gap-2"><i className="fa-solid fa-gauge-high"></i> {car.mileage}</span>
+                                          <span className="flex items-center gap-2"><i className="fa-solid fa-droplet"></i> {car.fuel}</span>
+                                      </div>
+                                      <button className="w-full bg-black text-[#eab308] py-3 rounded-xl uppercase text-[11px] font-black tracking-widest hover:bg-[#eab308] hover:text-black transition-colors">Vedi Dettagli</button>
+                                    </div>
+                                  </div>
+                                ))}
+                                {filteredCars.length === 0 && (
+                                    <div className="col-span-full text-center py-20">
+                                        <i className="fa-solid fa-car-side text-6xl text-gray-200 mb-4 block"></i>
+                                        <span className="text-gray-400 font-bold uppercase tracking-widest">Nessun veicolo presente nel database.</span>
+                                    </div>
+                                )}
+                            </div>
+                          </div>
+                      </section>
+                  )}
+
+                  {/* VISTA DETTAGLIO */}
+                  {currentPage === 'Dettaglio' && selectedCar && !isLoading && (
+                      <section className="bg-white py-12">
+                          <div className="max-w-[1200px] mx-auto px-6">
+                              <button onClick={() => navigate('Inventario')} className="flex items-center gap-2 text-gray-400 hover:text-[#eab308] text-xs font-black uppercase tracking-widest mb-8 transition-colors w-max">
+                                  <i className="fa-solid fa-chevron-left text-[16px]"></i> Torna all'inventario
+                              </button>
+
+                              <div className="bg-white rounded-[3rem] shadow-2xl border border-gray-100 p-6 md:p-12">
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+                                      
+                                      <div className="flex flex-col gap-4">
+                                          <div className="w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg border border-gray-100 relative">
+                                              <div className="absolute top-4 left-4 z-10">
+                                                  <span className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                                      {selectedCar.category}
+                                                  </span>
+                                              </div>
+                                              <img src={selectedCar.images && selectedCar.images[activeImageIndex] ? selectedCar.images[activeImageIndex] : "https://placehold.co/800x600/eeeeee/999999?text=Nessuna+Foto"} alt={selectedCar.model} className="w-full h-full object-cover transition-opacity duration-300" />
+                                              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                                                  {activeImageIndex + 1} / {selectedCar.images ? selectedCar.images.length : 1}
+                                              </div>
+                                          </div>
+                                          {selectedCar.images && selectedCar.images.length > 1 && (
+                                              <div className="grid grid-cols-5 gap-3">
+                                                  {selectedCar.images.map((img, idx) => (
+                                                      <div 
+                                                        key={idx} 
+                                                        onClick={() => setActiveImageIndex(idx)}
+                                                        className={`aspect-square rounded-2xl overflow-hidden cursor-pointer border-2 transition-all ${activeImageIndex === idx ? 'border-[#eab308] scale-95 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                                      >
+                                                          <img src={img} className="w-full h-full object-cover" alt={`Miniatura ${idx + 1}`} />
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                          )}
+                                      </div>
+
+                                      <div className="flex flex-col justify-center">
+                                          <span className="text-[#eab308] font-black uppercase tracking-[0.3em] text-xs mb-2">{selectedCar.brand}</span>
+                                          <h1 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter text-black mb-6 leading-tight">{selectedCar.model}</h1>
+                                          <p className="text-gray-500 leading-relaxed mb-8 text-lg font-light italic whitespace-pre-line">"{selectedCar.description || 'Nessuna descrizione fornita.'}"</p>
+                                          
+                                          <div className="text-4xl lg:text-5xl font-black text-black tracking-tighter mb-10 pb-8 border-b border-gray-100">
+                                              {selectedCar.price}
+                                          </div>
+
+                                          <div className="flex flex-col gap-4 mb-12">
+                                              <a 
+                                                href="tel:+393884713206" 
+                                                className="w-full bg-black text-[#eab308] py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-[#eab308] hover:text-black transition-colors shadow-xl flex justify-center items-center gap-3 border border-black"
+                                              >
+                                                  <i className="fa-solid fa-phone text-[18px]"></i> {selectedCar.category === 'Noleggio' ? 'Chiama per Noleggiare' : 'Chiamaci ora per saperne di più'}
+                                              </a>
+                                              <a 
+                                                href={`https://api.whatsapp.com/send?phone=393884713206&text=${whatsappMessage}`} 
+                                                target="_blank" rel="noreferrer"
+                                                className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:opacity-90 transition-opacity shadow-xl flex justify-center items-center gap-3"
+                                              >
+                                                  <i className="fa-brands fa-whatsapp text-[20px]"></i> Scrivici su WhatsApp
+                                              </a>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div className="mt-16 bg-gray-50 rounded-[3rem] p-8 md:p-12 border border-gray-100">
+                                      <div className="flex items-center gap-4 mb-10">
+                                          <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-[#eab308]">
+                                              <i className="fa-solid fa-gear text-[24px]"></i>
+                                          </div>
+                                          <h2 className="text-3xl font-black uppercase text-black tracking-tighter">Scheda Tecnica</h2>
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
+                                          {[
+                                              { label: "Categoria", value: selectedCar.category || '-' },
+                                              { label: "Marca", value: selectedCar.brand || '-' },
+                                              { label: "Modello", value: selectedCar.model || '-' },
+                                              { label: "Anno", value: selectedCar.year || '-' },
+                                              { label: "Chilometri", value: selectedCar.mileage || '-' },
+                                              { label: "Alimentazione", value: selectedCar.fuel || '-' },
+                                              { label: "Cambio", value: selectedCar.transmission || '-' },
+                                              { label: "Potenza", value: selectedCar.power || '-' },
+                                              { label: "Cilindrata", value: selectedCar.displacement || '-' },
+                                              { label: "Colore", value: selectedCar.color || '-' }
+                                          ].map((spec, i) => (
+                                              <div key={i} className="flex justify-between items-center py-4 border-b border-gray-200">
+                                                  <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">{spec.label}</span>
+                                                  <span className="text-black font-black uppercase text-xs">{spec.value}</span>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </section>
+                  )}
+
+                  {/* VISTA VENDI */}
+                  {currentPage === 'vendi' && (
+                      <div className="py-24 px-6 max-w-5xl mx-auto animate-in fade-in duration-700">
+                          <h2 className="text-5xl font-black uppercase italic mb-8 text-center text-black">Vendi la tua <span className="text-[#eab308]">Auto</span></h2>
+                          <p className="text-center text-slate-500 font-bold mb-12 text-sm">Compila il modulo sottostante con i dati del tuo veicolo per ricevere una valutazione gratuita e senza impegno.</p>
+                          <div className="bg-white p-4 md:p-8 rounded-[3rem] shadow-xl border border-slate-100 flex justify-center w-full h-[900px]">
+                              <iframe 
+                                  src={CONFIG.linkGoogleFormValutazione} 
+                                  width="100%" 
+                                  height="100%" 
+                                  frameBorder="0" 
+                                  marginHeight="0" 
+                                  marginWidth="0"
+                                  className="rounded-2xl"
+                              >Caricamento in corso…</iframe>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* VISTA CHI SIAMO */}
+                  {currentPage === 'chi-siamo' && (
+                      <section className="bg-white animate-in fade-in duration-700">
+                          <div className="bg-black py-24 px-6 text-center relative overflow-hidden">
+                              <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=2000")', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                              <div className="relative z-10 max-w-4xl mx-auto">
+                                  <h1 className="text-5xl lg:text-7xl font-black uppercase tracking-tighter text-[#eab308] mb-6">La Nostra Passione</h1>
+                                  <div className="flex items-center justify-center gap-4 mb-8">
+                                      <div className="h-[2px] w-16 bg-[#eab308]"></div>
+                                      <i className="fa-solid fa-wrench text-[24px] text-[#eab308]"></i>
+                                      <div className="h-[2px] w-16 bg-[#eab308]"></div>
+                                  </div>
+                                  <p className="text-white/90 text-lg font-medium italic">"Motori nel DNA: dalla carrozzeria di mio padre, al sogno di VINMORAUTO."</p>
+                              </div>
+                          </div>
+
+                          <div className="py-24 container mx-auto px-6 lg:px-20 max-w-[1200px]">
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                                  <div className="relative">
+                                      <div className="absolute -top-6 -left-6 w-32 h-32 bg-[#eab308]/20 rounded-full -z-10"></div>
+                                      <img 
+                                          src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&q=80&w=1000" 
+                                          className="rounded-[2.5rem] shadow-2xl border-8 border-white relative z-10"
+                                          alt="La nostra storia"
+                                      />
+                                      <div className="absolute -bottom-6 -right-6 bg-[#eab308] text-black p-8 rounded-3xl shadow-xl hidden md:block z-20">
+                                          <div className="text-4xl font-black"><i className="fa-solid fa-user-gear"></i></div>
+                                          <div className="text-[10px] font-bold uppercase tracking-widest mt-2">Operaio & Venditore</div>
+                                      </div>
+                                  </div>
+                                  <div className="flex flex-col gap-6">
+                                      <span className="text-[#eab308] font-black uppercase tracking-[0.2em] text-xs">La Storia di Vincenzo Morena</span>
+                                      <h2 className="text-4xl font-black uppercase text-black tracking-tighter">Una passione per i motori nata da bambino</h2>
+                                      <p className="text-gray-500 leading-relaxed">
+                                          La mia passione nasce fin da piccolo: sono sempre stato un patito di auto e moto. Sono cresciuto osservando e ammirando il lavoro di mio padre, che di professione faceva il carrozziere. Respirare quell'aria ha fatto sì che i motori diventassero per sempre il mio mondo.
+                                      </p>
+                                      <p className="text-gray-500 leading-relaxed">
+                                          Oggi lavoro come operaio in un'azienda, e VINMORAUTO è la concretizzazione di un sogno, portato avanti come secondo lavoro nato puramente dalla passione. Ci tengo a sottolinearlo: <strong>sono orgogliosamente un operaio e un venditore</strong>. Conosco l'importanza del lavoro duro e ci metto la stessa identica dedizione per offrire serietà ai miei clienti.
+                                      </p>
+                                      
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 border-l-4 border-l-[#eab308]">
+                                              <i className="fa-solid fa-shower text-black mb-2 text-[20px]"></i>
+                                              <h4 className="font-bold text-black uppercase text-sm mb-1">Autolavaggio</h4>
+                                              <p className="text-xs text-gray-500">Attivo da oltre 2 anni con servizi di alta qualità per la cura del tuo veicolo.</p>
+                                          </div>
+                                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 border-l-4 border-l-black">
+                                              <i className="fa-solid fa-key text-black mb-2 text-[20px]"></i>
+                                              <h4 className="font-bold text-black uppercase text-sm mb-1">Noleggio Auto</h4>
+                                              <p className="text-xs text-gray-500">Servizio attualmente in lavorazione, pronto ad aprire a brevissimo.</p>
+                                          </div>
+                                      </div>
+
+                                      <div className="mt-4 p-6 bg-black text-white rounded-2xl border border-[#eab308] relative overflow-hidden">
+                                          <i className="fa-solid fa-earth-europe text-[#eab308] opacity-10 text-[120px] absolute -right-6 -bottom-6"></i>
+                                          <div className="relative z-10">
+                                              <i className="fa-solid fa-plane-departure text-[#eab308] mb-3 text-[24px]"></i>
+                                              <h4 className="font-bold text-[#eab308] uppercase text-sm mb-2">Import/Export Esclusivo dalla Germania</h4>
+                                              <p className="text-sm text-gray-300 leading-relaxed">
+                                                  Oltre alla vendita classica, ci occupiamo di esportazione e importazione. Acquistiamo i nostri veicoli <strong>esclusivamente in Germania, a Francoforte</strong>, assicurandoci auto con cronologia tagliandi e standard qualitativi nettamente superiori.
+                                              </p>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </section>
+                  )}
+
+                  {/* VISTA CONTATTI */}
+                  {['Contatti'].includes(currentPage) && (
+                      <section className="bg-white py-24 animate-in fade-in duration-700">
+                          <div className="max-w-[1200px] mx-auto px-6">
+                              <div className="text-center mb-16">
+                                  <span className="text-[#eab308] font-black uppercase tracking-[0.2em] text-xs">Siamo a tua disposizione</span>
+                                  <h1 className="text-5xl lg:text-6xl font-black uppercase tracking-tighter text-black mt-2 mb-6">Contattaci</h1>
+                                  <div className="flex items-center justify-center gap-4">
+                                      <div className="h-[2px] w-12 bg-[#eab308]"></div>
+                                      <i className="fa-solid fa-envelope text-gray-300 text-[20px]"></i>
+                                      <div className="h-[2px] w-12 bg-[#eab308]"></div>
+                                  </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+                                  <div className="flex flex-col gap-8">
+                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
+                                          <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
+                                              <i className="fa-solid fa-phone text-[28px]"></i>
+                                          </div>
+                                          <div>
+                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Recapito Telefonico</h3>
+                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Chiamaci per informazioni su vendita, autolavaggio o noleggio.</p>
+                                              <a href="tel:+393884713206" className="inline-flex text-black font-black text-lg hover:text-[#eab308] transition-colors">
+                                                  388 471 3206
+                                              </a>
+                                          </div>
+                                      </div>
+
+                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
+                                          <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
+                                              <i className="fa-solid fa-envelope text-[28px]"></i>
+                                          </div>
+                                          <div>
+                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Posta Elettronica</h3>
+                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Preferisci scriverci? Inviaci un'email e ti risponderemo il prima possibile.</p>
+                                              <a href="mailto:vinmorauto@gmail.com" className="inline-flex text-black font-black text-lg hover:text-[#eab308] transition-colors break-all">
+                                                  vinmorauto@gmail.com
+                                              </a>
+                                          </div>
+                                      </div>
+
+                                      <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 flex items-start gap-6 hover:shadow-lg transition-shadow">
+                                          <div className="w-14 h-14 bg-black text-[#eab308] rounded-2xl flex items-center justify-center shrink-0">
+                                              <i className="fa-brands fa-facebook text-[28px]"></i>
+                                          </div>
+                                          <div>
+                                              <h3 className="text-xl font-black uppercase text-black tracking-tighter mb-2">Social Network</h3>
+                                              <p className="text-gray-500 leading-relaxed font-medium mb-3">Rimani aggiornato sui nuovi arrivi da Francoforte.</p>
+                                              <a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="inline-flex text-[#1877F2] font-black hover:text-[#eab308] transition-colors break-all">
+                                                  Visita la nostra pagina Facebook
+                                              </a>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex flex-col gap-8 h-full">
+                                      <div className="bg-black text-white rounded-3xl p-10 shadow-xl h-full flex flex-col justify-center relative overflow-hidden border-2 border-[#eab308]">
+                                          <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#eab308]/20 rounded-full blur-2xl"></div>
+                                          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[#eab308]/20 rounded-full blur-2xl"></div>
+                                          
+                                          <div className="relative z-10">
+                                              <h3 className="text-3xl font-black uppercase text-[#eab308] tracking-tighter mb-8 flex items-center gap-3">
+                                                  <i className="fa-regular fa-clock text-[28px]"></i> Orari di Apertura
+                                              </h3>
+                                              
+                                              <div className="flex flex-col gap-4">
+                                                  <div className="flex justify-between items-center border-b border-white/20 pb-4">
+                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Lunedì - Venerdì</span>
+                                                      <span className="text-white font-black">09:00 - 13:00 / 15:00 - 19:00</span>
+                                                  </div>
+                                                  <div className="flex justify-between items-center border-b border-white/20 pb-4">
+                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Sabato</span>
+                                                      <span className="text-white font-black">09:00 - 13:00</span>
+                                                  </div>
+                                                  <div className="flex justify-between items-center pb-4">
+                                                      <span className="text-gray-300 font-bold uppercase text-xs tracking-widest">Domenica</span>
+                                                      <span className="text-red-500 font-black">Chiuso</span>
+                                                  </div>
+                                              </div>
+
+                                              <div className="mt-10 p-6 bg-white/10 rounded-2xl border border-white/20">
+                                                  <p className="text-gray-300 text-sm leading-relaxed italic">
+                                                      "Si consiglia di fissare sempre un appuntamento telefonico prima di recarsi in sede per garantire la nostra totale disponibilità."
+                                                  </p>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </section>
+                  )}
+              </main>
+
+              {/* FOOTER */}
+              <footer className="bg-black text-white pt-20 pb-10 mt-auto border-t-4 border-[#eab308]">
+                <div className="max-w-[1400px] mx-auto px-10">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-16 border-b border-white/10 pb-16">
+                    <div className="col-span-1 md:col-span-1">
+                      <div className="flex items-center mb-6 cursor-pointer" onClick={() => navigate('Home')}>
+                          <img src="logo.png" alt="VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-2xl font-black tracking-tighter uppercase text-[#eab308]">VINMORAUTO</span>
+                            <span className="text-[10px] tracking-[0.3em] uppercase text-white font-bold">Di Vincenzo Morena</span>
+                          </div>
+                      </div>
+                      <p className="text-gray-400 text-sm leading-relaxed mb-6">Autolavaggio, vendita auto d'importazione esclusiva da Francoforte e servizi di noleggio.</p>
+                      <a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 bg-[#eab308] text-black px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:bg-white transition-colors w-max shadow-lg">
+                          <i className="fa-brands fa-facebook text-lg"></i> Seguici su Facebook
+                      </a>
+                    </div>
+                    <div>
+                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Link Rapidi</h4>
+                      <ul className="flex flex-col gap-4 text-gray-400 text-xs font-medium">
+                        {menuItems.map(item => (
+                            <li key={item.label} onClick={() => navigate(item.id)} className="hover:text-white cursor-pointer uppercase tracking-widest transition-colors">{item.label}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Contatti</h4>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mt-4">Tel: 388 471 3206</p>
+                      <p className="text-gray-400 text-[10px] uppercase tracking-widest mt-2 break-all">vinmorauto@gmail.com</p>
+                    </div>
+                  </div>
+                  <div className="text-center text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">© 2024 VINMORAUTO Di Vincenzo Morena. Tutti i diritti riservati.</div>
+                </div>
+              </footer>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
