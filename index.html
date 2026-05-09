@@ -195,11 +195,7 @@
                 <div className="relative z-10 max-w-[1440px] mx-auto h-full flex flex-col">
                   <div className="flex h-[90px]">
                     <div className="w-[35%] flex items-center pl-10 text-white cursor-pointer" onClick={() => navigate('Home')}>
-                      <img src="logo.png" alt="Logo VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
-                      <div className="flex flex-col leading-tight">
-                        <span className="text-2xl font-black tracking-tighter uppercase text-[#eab308]">VINMORAUTO</span>
-                        <span className="text-[10px] tracking-[0.3em] uppercase text-white font-bold">Di Vincenzo Morena</span>
-                      </div>
+                      <img src="logo.png" alt="Logo VINMORAUTO" className="h-16 w-auto object-contain" />
                     </div>
                     <div className="w-[65%] flex items-center justify-end gap-10 pr-10">
                        <div className="flex items-center gap-3">
@@ -235,10 +231,7 @@
 
               <header className="lg:hidden bg-black text-white p-5 flex justify-between items-center sticky top-0 z-50">
                 <div className="flex items-center cursor-pointer" onClick={() => navigate('Home')}>
-                    <div className="flex flex-col">
-                        <span className="text-xl font-black uppercase tracking-tighter leading-none text-[#eab308]">VINMORAUTO</span>
-                        <span className="text-[8px] uppercase tracking-widest text-white">Di Vincenzo Morena</span>
-                    </div>
+                    <img src="logo.png" alt="Logo VINMORAUTO" className="h-10 w-auto object-contain" />
                 </div>
                 <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                   {isMobileMenuOpen ? <i className="fa-solid fa-xmark text-[30px] text-[#eab308]"></i> : <i className="fa-solid fa-bars text-[30px] text-[#eab308]"></i>}
@@ -579,18 +572,30 @@
               <footer className="bg-black text-white pt-20 pb-10 mt-auto border-t-4 border-[#eab308]">
                 <div className="max-w-[1400px] mx-auto px-10">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-16 border-b border-white/10 pb-16">
-                    <div>
+                    <div className="col-span-1 md:col-span-1">
                       <div className="flex items-center mb-6 cursor-pointer" onClick={() => navigate('Home')}>
-                          <img src="logo.png" alt="VINMORAUTO" className="h-12 mr-3 object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
-                          <div className="flex flex-col leading-tight">
-                            <span className="text-2xl font-black tracking-tighter uppercase text-[#eab308]">VINMORAUTO</span>
-                            <span className="text-[10px] tracking-[0.3em] uppercase text-white font-bold">Di Vincenzo Morena</span>
-                          </div>
+                          <img src="logo.png" alt="VINMORAUTO" className="h-16 w-auto object-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
                       </div>
-                      <p className="text-gray-400 text-sm leading-relaxed mb-6">Autolavaggio, vendita auto d'importazione da Francoforte.</p>
+                      <p className="text-gray-400 text-sm leading-relaxed mb-6">Autolavaggio, vendita auto d'importazione esclusiva da Francoforte e servizi di noleggio.</p>
+                      <a href="https://www.facebook.com/vincenzo.morena.771?rdid=MjRXsFaI3wVDGt6O&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F18eewHnqRM%2F%3Fref%3D1#" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 bg-[#eab308] text-black px-6 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:bg-white transition-colors w-max shadow-lg">
+                          <i className="fa-brands fa-facebook text-lg"></i> Seguici su Facebook
+                      </a>
+                    </div>
+                    <div>
+                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Link Rapidi</h4>
+                      <ul className="flex flex-col gap-4 text-gray-400 text-xs font-medium">
+                        {menuItems.map(item => (
+                            <li key={item.label} onClick={() => navigate(item.id)} className="hover:text-white cursor-pointer uppercase tracking-widest transition-colors">{item.label}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-[#eab308] font-black uppercase text-sm tracking-widest mb-8">Contatti</h4>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mt-4">Tel: 388 471 3206</p>
+                      <p className="text-gray-400 text-[10px] uppercase tracking-widest mt-2 break-all">vinmorauto@gmail.com</p>
                     </div>
                   </div>
-                  <div className="text-center text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">© 2024 VINMORAUTO. Tutti i diritti riservati.</div>
+                  <div className="text-center text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">© 2024 VINMORAUTO Di Vincenzo Morena. Tutti i diritti riservati.</div>
                 </div>
               </footer>
             </div>
