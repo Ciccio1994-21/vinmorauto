@@ -56,7 +56,7 @@
             const initialForm = {
                 brand: '', model: '', price: '', year: '', mileage: '', 
                 fuel: 'Diesel', transmission: 'Automatico', category: 'Vendita', description: '', 
-                images: [], power: '', displacement: '', color: ''
+                images: [], power: '', displacement: '', color: '', status: 'Disponibile'
             };
             
             const [newCar, setNewCar] = useState(initialForm);
@@ -71,6 +71,11 @@
                 };
                 init();
             }, []);
+
+            // Riapplica le icone di lucide quando newCar cambia per gestire i bottoni dinamici
+            useEffect(() => {
+                setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+            }, [newCar.status]);
 
             const handleFile = (e) => {
                 const files = Array.from(e.target.files);
@@ -146,6 +151,7 @@
                     power: car.power ? String(car.power).replace(/[^0-9]/g, '') : '',
                     displacement: car.displacement ? String(car.displacement).replace(/[^0-9]/g, '') : '',
                     color: car.color || '',
+                    status: car.status || 'Disponibile',
                     images: car.images || []
                 });
                 window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -175,6 +181,7 @@
                         power: newCar.power ? `${newCar.power} CV` : '',
                         displacement: newCar.displacement ? `${newCar.displacement} cm³` : '',
                         color: newCar.color || '',
+                        status: newCar.status || 'Disponibile',
                         images: newCar.images,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
@@ -272,6 +279,18 @@
                                         </label>
                                     </div>
 
+                                    {/* Pulsante Segna come Venduta */}
+                                    <div className="mb-2">
+                                        <label className={`w-full p-3 flex items-center justify-center gap-2 rounded-xl text-sm border cursor-pointer font-bold uppercase tracking-widest transition-colors ${newCar.status === 'Venduta' ? 'bg-red-900/30 text-red-500 border-red-500/50' : 'border-white/10 text-white/50 hover:bg-white/5'}`}>
+                                            <input type="checkbox" className="hidden" checked={newCar.status === 'Venduta'} onChange={(e) => setNewCar({...newCar, status: e.target.checked ? 'Venduta' : 'Disponibile'})} />
+                                            {newCar.status === 'Venduta' ? (
+                                                <><i data-lucide="check-circle" className="w-4 h-4"></i> Auto Segnata come Venduta</>
+                                            ) : (
+                                                <><i data-lucide="circle" className="w-4 h-4"></i> Segna come Venduta</>
+                                            )}
+                                        </label>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-3">
                                         <input required placeholder="Marca (es. Audi)" className="p-3 rounded-xl text-sm" value={newCar.brand} onChange={e => setNewCar({...newCar, brand: e.target.value})} />
                                         <input required placeholder="Modello" className="p-3 rounded-xl text-sm" value={newCar.model} onChange={e => setNewCar({...newCar, model: e.target.value})} />
@@ -329,19 +348,27 @@
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {autoList.map(car => (
-                                    <div key={car.id} className="glass p-4 rounded-3xl flex gap-4 items-center group relative overflow-hidden hover:bg-white/[0.05] transition-all border-white/5">
-                                        <div className="absolute top-0 left-0">
+                                    <div key={car.id} className={`glass p-4 rounded-3xl flex gap-4 items-center group relative overflow-hidden transition-all border-white/5 ${car.status === 'Venduta' ? 'opacity-60 bg-red-900/10 grayscale-[0.2]' : 'hover:bg-white/[0.05]'}`}>
+                                        <div className="absolute top-0 left-0 z-10">
                                             <span className={`px-2 py-0.5 rounded-br-lg text-[8px] font-black uppercase tracking-widest shadow-md ${car.category === 'Vendita' ? 'bg-[#eab308] text-black' : 'bg-black text-[#eab308] border border-[#eab308]'}`}>
                                                 {car.category || 'Vendita'}
                                             </span>
                                         </div>
-                                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 border border-white/5 bg-slate-800">
+
+                                        <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 border border-white/5 bg-slate-800 relative">
                                             {car.images && car.images[0] && <img src={car.images[0]} className="w-full h-full object-cover" />}
+                                            {/* Badge "Venduta" sull'immagine */}
+                                            {car.status === 'Venduta' && (
+                                                <div className="absolute inset-0 bg-red-900/70 flex items-center justify-center backdrop-blur-[2px]">
+                                                    <span className="text-white text-[11px] font-black uppercase tracking-widest transform -rotate-12 border border-white/30 px-2 py-1 rounded shadow-lg bg-red-600">Venduta</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex-grow pt-2">
-                                            <h3 className="font-bold uppercase text-sm leading-tight text-white">{car.brand} <span className="text-[#eab308]">{car.model}</span></h3>
+                                        
+                                        <div className="flex-grow pt-2 relative z-10">
+                                            <h3 className={`font-bold uppercase text-sm leading-tight ${car.status === 'Venduta' ? 'text-red-400 line-through' : 'text-white'}`}>{car.brand} <span className={car.status === 'Venduta' ? 'text-red-500' : 'text-[#eab308]'}>{car.model}</span></h3>
                                             <div className="text-[10px] text-slate-400 font-bold mt-1 uppercase">
-                                                {car.year} • {car.mileage} • <span className="text-white">{car.price}</span>
+                                                {car.year} • {car.mileage} • <span className={car.status === 'Venduta' ? 'text-red-300' : 'text-white'}>{car.price}</span>
                                             </div>
                                             <div className="flex flex-wrap gap-2 mt-2">
                                                 {car.power && <span className="text-[8px] bg-white/10 px-1.5 py-0.5 rounded text-white font-bold uppercase">{car.power}</span>}
@@ -350,7 +377,7 @@
                                             </div>
                                         </div>
                                         
-                                        <div className="flex flex-col gap-2 relative z-10">
+                                        <div className="flex flex-col gap-2 relative z-20">
                                             <button onClick={() => startEdit(car)} className="p-2 bg-blue-600/20 text-blue-400 rounded-lg md:opacity-0 group-hover:opacity-100 transition hover:bg-blue-600 hover:text-white">
                                                 <i data-lucide="edit-3" className="w-4 h-4"></i>
                                             </button>
