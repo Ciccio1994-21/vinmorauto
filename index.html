@@ -324,9 +324,15 @@
                                 {carsData.slice(0, 3).map((car) => (
                                   <div key={car.id} onClick={() => navigate('Dettaglio', car)} className="bg-white rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-500 hover:-translate-y-2 border border-gray-100 relative">
                                     <div className="absolute top-4 left-4 z-10">
-                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
-                                            {car.category || 'Veicolo'}
-                                        </span>
+                                        {car.status === 'Venduta' ? (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-red-600 text-white border border-red-500">
+                                                VENDUTA
+                                            </span>
+                                        ) : (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                                {car.category || 'Veicolo'}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="relative h-60 overflow-hidden">
                                       <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -399,9 +405,15 @@
                                 {filteredCars.map((car) => (
                                   <div key={car.id} onClick={() => navigate('Dettaglio', car)} className="bg-white rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-500 hover:-translate-y-2 border border-gray-100 relative">
                                     <div className="absolute top-4 left-4 z-10">
-                                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
-                                            {car.category}
-                                        </span>
+                                        {car.status === 'Venduta' ? (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-red-600 text-white border border-red-500">
+                                                VENDUTA
+                                            </span>
+                                        ) : (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                                {car.category}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="relative h-60 overflow-hidden">
                                       <img src={car.images && car.images[0] ? car.images[0] : "https://placehold.co/600x400/eeeeee/999999?text=Nessuna+Foto"} alt={car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -437,9 +449,15 @@
                                       <div className="flex flex-col gap-4">
                                           <div className="w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg border border-gray-100 relative">
                                               <div className="absolute top-4 left-4 z-10">
-                                                  <span className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
-                                                      {selectedCar.category}
-                                                  </span>
+                                                  {selectedCar.status === 'Venduta' ? (
+                                                      <span className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-red-600 text-white border border-red-500">
+                                                          VENDUTA
+                                                      </span>
+                                                  ) : (
+                                                      <span className="px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-md bg-black text-[#eab308]">
+                                                          {selectedCar.category}
+                                                      </span>
+                                                  )}
                                               </div>
                                               <img src={selectedCar.images && selectedCar.images[activeImageIndex] ? selectedCar.images[activeImageIndex] : "https://placehold.co/800x600/eeeeee/999999?text=Nessuna+Foto"} alt={selectedCar.model} className="w-full h-full object-cover transition-opacity duration-300" />
                                           </div>
@@ -464,23 +482,31 @@
                                           <p className="text-gray-500 leading-relaxed mb-8 text-lg font-light italic whitespace-pre-line">"{selectedCar.description || 'Nessuna descrizione fornita.'}"</p>
                                           
                                           <div className="text-4xl lg:text-5xl font-black text-black tracking-tighter mb-10 pb-8 border-b border-gray-100">
-                                              {selectedCar.price}
+                                              {selectedCar.status === 'Venduta' ? <span className="line-through text-gray-400">{selectedCar.price}</span> : selectedCar.price}
                                           </div>
 
                                           <div className="flex flex-col gap-4 mb-12">
-                                              <a 
-                                                href="tel:+393884713206" 
-                                                className="w-full bg-black text-[#eab308] py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-[#eab308] hover:text-black transition-colors shadow-xl flex justify-center items-center gap-3 border border-black"
-                                              >
-                                                  <i className="fa-solid fa-phone text-[18px]"></i> {selectedCar.category === 'Noleggio' ? 'Chiama per Noleggiare' : 'Chiamaci ora per saperne di più'}
-                                              </a>
-                                              <a 
-                                                href={`https://api.whatsapp.com/send?phone=393884713206&text=${whatsappMessage}`} 
-                                                target="_blank" rel="noreferrer"
-                                                className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:opacity-90 transition-opacity shadow-xl flex justify-center items-center gap-3"
-                                              >
-                                                  <i className="fa-brands fa-whatsapp text-[20px]"></i> Scrivici su WhatsApp
-                                              </a>
+                                              {selectedCar.status === 'Venduta' ? (
+                                                  <div className="w-full bg-red-50 text-red-600 py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] flex justify-center items-center border border-red-200 shadow-sm">
+                                                      <i className="fa-solid fa-ban text-[18px] mr-3"></i> Veicolo non più disponibile
+                                                  </div>
+                                              ) : (
+                                                  <>
+                                                      <a 
+                                                        href="tel:+393884713206" 
+                                                        className="w-full bg-black text-[#eab308] py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-[#eab308] hover:text-black transition-colors shadow-xl flex justify-center items-center gap-3 border border-black"
+                                                      >
+                                                          <i className="fa-solid fa-phone text-[18px]"></i> {selectedCar.category === 'Noleggio' ? 'Chiama per Noleggiare' : 'Chiamaci ora per saperne di più'}
+                                                      </a>
+                                                      <a 
+                                                        href={`https://api.whatsapp.com/send?phone=393884713206&text=${whatsappMessage}`} 
+                                                        target="_blank" rel="noreferrer"
+                                                        className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:opacity-90 transition-opacity shadow-xl flex justify-center items-center gap-3"
+                                                      >
+                                                          <i className="fa-brands fa-whatsapp text-[20px]"></i> Scrivici su WhatsApp
+                                                      </a>
+                                                  </>
+                                              )}
                                           </div>
                                       </div>
                                   </div>
